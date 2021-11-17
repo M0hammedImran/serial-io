@@ -1,0 +1,45 @@
+{
+    "compilerOptions": {
+        "target": "ES5",
+        "module": "CommonJS",
+        "lib": ["ES2015", "dom", "ES2015.Iterable"],
+        "outDir": "dist",
+        "downlevelIteration": true,
+        "noImplicitAny": true,
+        "strictNullChecks": true,
+        "noImplicitThis": true,
+        "experimentalDecorators": true,
+        "emitDecoratorMetadata": true,
+        "allowUnreachableCode": false,
+
+        "allowJs": false,
+        "checkJs": false,
+        "skipLibCheck": true,
+        "strict": true,
+        "allowSyntheticDefaultImports": true,
+
+        /* Module Resolution */
+        "esModuleInterop": true,
+        "moduleResolution": "Node",
+        "resolveJsonModule": true,
+        "isolatedModules": true,
+
+        /* Type Checking */
+        "noUnusedLocals": true,
+        "noUnusedParameters": true,
+        "noImplicitReturns": false,
+        "noFallthroughCasesInSwitch": true,
+        "forceConsistentCasingInFileNames": true,
+
+        "removeComments": true,
+        "newLine": "lf",
+
+        "jsx": "preserve",
+        "declaration": true,
+
+        "baseUrl": "./src",
+        "typeRoots": ["./node_modules/@types"]
+    },
+    "include": ["src/**/*.ts"],
+    "exclude": ["node_modules", "dist", "**/*.spec.ts"]
+}
