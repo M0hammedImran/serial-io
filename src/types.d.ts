@@ -1,8 +1,7 @@
 export interface WriteDatasetProps {
     masterKey: string;
     networkName: string;
-    channel?: number;
-    panid?: string;
+    type: 'leader' | 'child';
 }
 
 export interface createSerialConnectionProps {

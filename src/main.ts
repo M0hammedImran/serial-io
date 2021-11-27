@@ -1,42 +1,35 @@
-import { createSerialConnection } from './createSerialConnection';
+import { createLeaderNode } from './createLeader';
+import fastify, { FastifyInstance } from 'fastify';
 
-const UART_PORT = '/dev/ttyUSB0';
-const BaudRate = 115200;
-const Delimiter = '\r\n';
+const app: FastifyInstance = fastify({ logger: true });
 
-/**
- * entry function
- */
+// Declare a route
+app.get('/', async (_request, _reply) => {
+    return { message: 'NO_DATA', ok: true, statusCode: 204 };
+});
+
+app.get('/get_devices', async (_request, _reply) => {
+    const leader = await createLeaderNode();
+    const data = await leader.getDevices();
+    console.log(`🚀 | file: main.ts | line 14 | data`, data);
+    return { data: data, ok: true, statusCode: 200 };
+});
+
+app.get<{ Params: { id: string } }>('/get_device/:id', async (request, _reply) => {
+    const { id } = request.params;
+
+    // const data = await getDevice(id);
+    return { data: id, ok: true, statusCode: 200 };
+});
+
+/** entry function */
 async function main() {
     try {
-        const OPTIONS = {
-            uartPort: UART_PORT,
-            delimiter: Delimiter,
-            baudRate: BaudRate,
-        };
-
-        const props = await createSerialConnection(OPTIONS);
-        const { port, writeDataset, checkState, ipaddr, startIfconfig, startThread } = props;
-
-        // await factoryReset();
-        const dataset = await writeDataset({
-            masterKey: 'cce524b24253d9da19965a83d50eb749',
-            networkName: 'test',
-            channel: 10,
-        });
-        console.log(`🚀 | file: main.ts | line 24 | dataset`, dataset);
-        await startIfconfig();
-        await startThread();
-        await ipaddr();
-        const data = await checkState();
-        console.log(`🚀 | file: main.ts | line 32 | data`, data);
-
-        port.listenerCount('data') > 0 && port.removeAllListeners('data');
-        port.listenerCount('close') > 0 && port.removeAllListeners('close');
-
-        port.on('error', console.log);
+        await app.listen(3000);
     } catch (error) {
         console.log(error);
+        app.log.error(error);
+        process.exit(1);
     }
 }
 

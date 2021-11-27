@@ -8,15 +8,11 @@ export function sleep(ms: number): Promise<void> {
 }
 
 /**
- * @function parseBufferToString
- * @param {Buffer} buffer
- * @return {string}
+ * @description convert hexadecimal to string
+ * @param {string} hex string
+ * @return {string} string
  */
-export function parseBufferToString(buffer: Buffer): string {
-    console.log(
-        buffer.toString('utf8'),
-        // .split('\r\n')
-        // .filter((v) => !v.includes('>')),
-    );
-    return buffer.toString('utf8');
+export function hex2str(hex: string): string {
+    const str = (hex.match(/[\s\S]{1,2}/g) || []).filter((v) => v !== '00');
+    return str.map((v) => String.fromCharCode(parseInt(v, 16))).join('');
 }

@@ -8,8 +8,19 @@ interface createSerialConnectionReturnType {
     /** @description: Factory Reset the thread device. */
     factoryReset(): Promise<void>;
 
-    /** @description: Check the state of the device. */
-    checkState(): Promise<output>;
+    /**
+     * @description: Check the state of the device.
+     * @param {string} type - Type of device.
+     * @default type 'leader'
+     */
+    checkState(type?: 'leader' | 'child'): Promise<output>;
+
+    /**
+     * @description: Check the initial state of the device.
+     * @param {string} type - Type of device.
+     * @default type 'leader'
+     */
+    checkInitialState(type?: 'leader' | 'child'): Promise<output>;
 
     /** @description: Start IPv6 interface. */
     startIfconfig(): Promise<boolean>;
@@ -21,14 +32,19 @@ interface createSerialConnectionReturnType {
     ipaddr(): Promise<output>;
 
     /** @description: Write and drain the port. */
-    writeToBuffer: (data: string) => Promise<output>;
+    writeToBuffer: (data: string, wait?: number) => Promise<output>;
 
     /**
      * @description Check the state of the device.
      * @param {WriteDatasetProps} {masterKey, networkName, channel}
      */
-    writeDataset({ masterKey, networkName, channel }: WriteDatasetProps): Promise<output>;
+    writeDataset(props: WriteDatasetProps): Promise<output>;
 }
+
+const clearEventListeners = (port: SerialPort): void => {
+    port.removeAllListeners('data');
+    port.removeAllListeners('close');
+};
 
 /**
  * @description: Create Serial Connection.
@@ -54,7 +70,7 @@ export async function createSerialConnection({
     });
     port.pipe(parser);
 
-    const writeToBuffer = (data: string): Promise<{ ok: boolean; data: string[] }> =>
+    const writeToBuffer = (data: string, wait: number = 2000): Promise<{ ok: boolean; data: string[] }> =>
         new Promise((resolve, reject) => {
             let outputData = '';
             port.open((err) => {
@@ -66,7 +82,7 @@ export async function createSerialConnection({
             port.write(data + '\n');
             port.drain();
 
-            sleep(2000).then(() => {
+            sleep(wait).then(() => {
                 port.close((err) => {
                     if (err) {
                         return reject(err);
@@ -82,8 +98,6 @@ export async function createSerialConnection({
 
             port.on('data', (data) => {
                 outputData += data;
-
-                port.removeListener('data', () => console.log('closing "data" event listener:', data));
             });
 
             port.on('close', (code) => {
@@ -91,9 +105,8 @@ export async function createSerialConnection({
                     const outputAsArray = String(outputData)
                         .split('\r\n')
                         .filter((val) => !val.includes(data.trim()))
-                        .filter((val) => !val.includes('>'));
-
-                    port.removeListener('close', () => console.log('closing "close" event listener:', data));
+                        .filter((val) => val !== '>')
+                        .filter((val) => val !== '> ');
 
                     resolve({
                         ok: outputAsArray.includes('Done'),
@@ -108,89 +121,99 @@ export async function createSerialConnection({
     const factoryReset = async (): Promise<void> => {
         console.log('factoryreset');
 
-        writeToBuffer('factoryreset');
+        await writeToBuffer('factoryreset');
 
         await sleep(3000);
 
-        await writeToBuffer('\n');
-        await writeToBuffer('\n');
+        await writeToBuffer('');
+        await writeToBuffer('');
+
+        clearEventListeners(port);
         return;
     };
 
-    const writeDataset = async ({
-        masterKey,
-        networkName,
-        channel = 12,
-        panid = '0x1234',
-    }: WriteDatasetProps): Promise<output> => {
+    const writeDataset = async ({ masterKey, networkName, type = 'leader' }: WriteDatasetProps): Promise<output> => {
         console.log('writing dataset');
 
-        const init = await writeToBuffer(`dataset init new`);
-        port.removeAllListeners('data');
-        port.removeAllListeners('close');
-        if (!init.ok) throw new Error('Failed to init dataset');
+        const clear = await writeToBuffer('dataset clear');
+        if (!clear.ok) throw new Error('Failed to clear dataset');
+
+        if (type === 'leader') {
+            const init = await writeToBuffer(`dataset init new`);
+            console.log(`🚀 | file: createSerialConnection.ts | line 144 | init`, init);
+            if (!init.ok) throw new Error('Failed to init dataset');
+        }
 
         const setMasterKey = await writeToBuffer(`dataset masterkey ${masterKey}`);
-        port.removeAllListeners('data');
-        port.removeAllListeners('close');
         if (!setMasterKey.ok) throw new Error('Failed to set masterKey');
 
         const setNetworkName = await writeToBuffer(`dataset networkname ${networkName}`);
-        port.removeAllListeners('data');
-        port.removeAllListeners('close');
         if (!setNetworkName.ok) throw new Error('Failed to set networkName');
 
-        const setChannel = await writeToBuffer(`dataset channel ${channel}`);
-        port.removeAllListeners('data');
-        port.removeAllListeners('close');
-        if (!setChannel.ok) throw new Error('Failed to set channel');
-
-        const setPanId = await writeToBuffer(`dataset panid ${panid}`);
-        port.removeAllListeners('data');
-        port.removeAllListeners('close');
-        if (!setPanId.ok) throw new Error('Failed to set channel');
-
         const commitActive = await writeToBuffer('dataset commit active');
-        port.removeAllListeners('data');
-        port.removeAllListeners('close');
         if (!commitActive.ok) throw new Error('Failed to commit active dataset');
 
         const checkActiveDataset = await writeToBuffer('dataset active');
-        port.removeAllListeners('data');
-        port.removeAllListeners('close');
+
+        clearEventListeners(port);
 
         return checkActiveDataset;
     };
 
-    const checkState = async () => {
+    const checkState = async (type: 'leader' | 'child' = 'leader') => {
         await sleep(1000);
-        console.log('Check state');
+        const cmd = 'state';
         let data: output;
-        data = await writeToBuffer('state');
-        if (!data.data.includes('leader')) {
-            data = await writeToBuffer('state');
+        data = await writeToBuffer(cmd);
+
+        if (type === 'leader' && !data.data.includes(type)) {
+            data = await writeToBuffer(cmd);
         }
+
+        if (type === 'child' && !data.data.includes(type)) {
+            data = await writeToBuffer(cmd);
+        }
+
+        clearEventListeners(port);
+
+        return data;
+    };
+
+    const checkInitialState = async () => {
+        await sleep(1000);
+        const cmd = 'state';
+        const data = await writeToBuffer(cmd);
+        clearEventListeners(port);
         return data;
     };
 
     const startIfconfig = async () => {
         await sleep(1000);
-        console.log('ifconfig up');
-        const data = await writeToBuffer('ifconfig up');
+        const cmd = 'ifconfig up';
+        const data = await writeToBuffer(cmd);
+
+        clearEventListeners(port);
+
         return data.ok;
     };
 
     const startThread = async () => {
         await sleep(1000);
-        console.log('thread start');
-        const data = await writeToBuffer('thread start');
+        const cmd = 'thread start';
+        const data = await writeToBuffer(cmd);
+
+        clearEventListeners(port);
+
         return data.ok;
     };
 
     const ipaddr = async () => {
         await sleep(1000);
-        console.log('ipaddr');
-        const data = await writeToBuffer('ipaddr');
+        const cmd = 'ipaddr';
+        const data = await writeToBuffer(cmd);
+
+        clearEventListeners(port);
+
         return data;
     };
 
@@ -203,5 +226,6 @@ export async function createSerialConnection({
         startThread,
         ipaddr,
         writeToBuffer,
+        checkInitialState,
     };
 }
