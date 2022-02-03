@@ -1,11 +1,19 @@
 import { createLeaderNode } from './createLeader';
 import fastify, { FastifyInstance } from 'fastify';
+import { createSerialConnection } from './createSerialConnection';
 
-const app: FastifyInstance = fastify({ logger: true });
+const app: FastifyInstance = fastify({
+    logger: {
+        prettyPrint: true,
+    },
+});
 
 // Declare a route
 app.get('/', async (_request, _reply) => {
-    return { message: 'NO_DATA', ok: true, statusCode: 204 };
+    const serial = await createSerialConnection({ uartPort: '/dev/ttyUSB0', delimiter: '\r\n', baudRate: 115200 });
+    const message = JSON.stringify({ ok: true, statusCode: 200 });
+    await serial.writeToBuffer(`udp send fdde:ad00:beef:0:105:f1f0:de18:3726 234 ${message}`);
+    return { message, length: message.length, ok: true, statusCode: 200 };
 });
 
 app.get('/get_devices', async (_request, _reply) => {

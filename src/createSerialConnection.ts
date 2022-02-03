@@ -79,6 +79,7 @@ export async function createSerialConnection({
                 }
             });
             console.log(`writing ${data}`);
+
             port.write(data + '\n');
             port.drain();
 
@@ -102,6 +103,7 @@ export async function createSerialConnection({
 
             port.on('close', (code) => {
                 if (code === null || code === 0) {
+                    console.log(`🚀 | outputData`, outputData);
                     const outputAsArray = String(outputData)
                         .split('\r\n')
                         .filter((val) => !val.includes(data.trim()))
@@ -132,7 +134,12 @@ export async function createSerialConnection({
         return;
     };
 
-    const writeDataset = async ({ masterKey, networkName, type = 'leader' }: WriteDatasetProps): Promise<output> => {
+    const writeDataset = async ({
+        masterKey,
+        networkName,
+        type = 'leader',
+        panid,
+    }: WriteDatasetProps): Promise<output> => {
         console.log('writing dataset');
 
         const clear = await writeToBuffer('dataset clear');
@@ -149,6 +156,9 @@ export async function createSerialConnection({
 
         const setNetworkName = await writeToBuffer(`dataset networkname ${networkName}`);
         if (!setNetworkName.ok) throw new Error('Failed to set networkName');
+
+        const setPanid = await writeToBuffer(`dataset panid ${panid}`);
+        if (!setPanid.ok) throw new Error('Failed to set networkName');
 
         const commitActive = await writeToBuffer('dataset commit active');
         if (!commitActive.ok) throw new Error('Failed to commit active dataset');
@@ -181,19 +191,15 @@ export async function createSerialConnection({
 
     const checkInitialState = async () => {
         await sleep(1000);
-        const cmd = 'state';
-        const data = await writeToBuffer(cmd);
+        const data = await writeToBuffer('state');
         clearEventListeners(port);
         return data;
     };
 
     const startIfconfig = async () => {
         await sleep(1000);
-        const cmd = 'ifconfig up';
-        const data = await writeToBuffer(cmd);
-
+        const data = await writeToBuffer('ifconfig up');
         clearEventListeners(port);
-
         return data.ok;
     };
 

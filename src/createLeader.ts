@@ -16,58 +16,50 @@ export async function createLeaderNode() {
         };
 
         let state: output;
-        const props = await createSerialConnection(OPTIONS);
-        const { port, writeDataset, checkState, checkInitialState, ipaddr, startIfconfig, startThread, writeToBuffer } =
-            props;
+        const serial = await createSerialConnection(OPTIONS);
 
-        state = await checkInitialState('leader');
+        state = await serial.checkInitialState('leader');
 
         if (state.data[0] === 'leader') {
-            await writeToBuffer('coap start');
+            await serial.writeToBuffer('coap start');
         } else {
-            const dataset = await writeDataset({
-                masterKey: '00112233445566778899aabbccddeeff',
-                networkName: 'test',
+            const dataset = await serial.writeDataset({
+                masterKey: '1234c0de1ab51234c0de1ab51234c0de',
+                networkName: 'SleepyEFR32',
                 type: 'leader',
+                panid: 2222,
             });
 
             console.log(`🚀 | file: main.ts | line 24 | dataset`, dataset);
 
-            await startIfconfig();
-            await startThread();
-            await ipaddr();
+            await serial.startIfconfig();
+            await serial.startThread();
+            await serial.ipaddr();
 
-            state = await checkState();
+            state = await serial.checkState();
         }
 
-        port.listenerCount('data') > 0 && port.removeAllListeners('data');
-        port.listenerCount('close') > 0 && port.removeAllListeners('close');
+        serial.port.listenerCount('data') > 0 && serial.port.removeAllListeners('data');
+        serial.port.listenerCount('close') > 0 && serial.port.removeAllListeners('close');
 
-        port.on('error', (err) => {
+        serial.port.on('error', (err) => {
             if (err) throw err;
         });
 
         const getDevices = async () => {
-            const output = await writeToBuffer('childip');
-            console.log(`🚀 | file: createLeader.ts | line 50 | output`, output);
-
+            const output = await serial.writeToBuffer('childip');
             const devices = output.data.map((device) => device.split(' ')[1]);
-
             const data: { ip: string; type: Record<string, any> }[] = [];
-
             for (let i = 0; i < devices.length; i++) {
                 const device = devices[i];
                 if (!device) break;
-                const type = await writeToBuffer(`coap get ${device} config`);
+                const type = await serial.writeToBuffer(`coap get ${device} config`);
                 const typeData = type.data[0].split('payload: ');
                 if (!typeData[1]) break;
                 const _data = JSON.parse(hex2str(typeData[1]) || '{}');
                 if (!_data?.type) break;
                 data.push({ ip: device, type: _data?.type });
-                console.log(`🚀 | file: createLeader.ts | line 66 | data`, data);
             }
-
-            console.log(`🚀 | file: createLeader.ts | line 69 | data`, data);
             return data;
         };
 
@@ -77,4 +69,7 @@ export async function createLeaderNode() {
     }
 }
 
-createLeaderNode();
+// createLeaderNode().catch((err) => {
+//     console.log(err);
+//     process.exit(1);
+// });
