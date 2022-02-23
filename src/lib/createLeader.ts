@@ -1,8 +1,8 @@
-import { output } from './types';
+import { output } from '../types';
 import { createSerialConnection } from './createSerialConnection';
 import { hex2str } from './utils';
 
-const UART_PORT = '/dev/ttyUSB0';
+const UART_PORT = '/dev/ttyS0';
 const BaudRate = 115200;
 const Delimiter = '\r\n';
 
@@ -42,7 +42,7 @@ export async function createLeaderNode() {
         serial.port.listenerCount('data') > 0 && serial.port.removeAllListeners('data');
         serial.port.listenerCount('close') > 0 && serial.port.removeAllListeners('close');
 
-        serial.port.on('error', (err) => {
+        serial.port.on('error', (err: any) => {
             if (err) throw err;
         });
 
@@ -68,8 +68,3 @@ export async function createLeaderNode() {
         throw err;
     }
 }
-
-// createLeaderNode().catch((err) => {
-//     console.log(err);
-//     process.exit(1);
-// });

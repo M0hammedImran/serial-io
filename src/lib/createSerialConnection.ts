@@ -1,5 +1,5 @@
-import SerialPort from 'serialport';
-import type { createSerialConnectionProps, output, WriteDatasetProps } from './types';
+import { SerialPort, ReadlineParser } from 'serialport';
+import type { createSerialConnectionProps, output, WriteDatasetProps } from '../types';
 import { sleep } from './utils';
 
 interface createSerialConnectionReturnType {
@@ -54,20 +54,24 @@ export async function createSerialConnection({
     delimiter = '\r\n',
     baudRate = 115200,
 }: createSerialConnectionProps): Promise<createSerialConnectionReturnType> {
-    const Readline = SerialPort.parsers.Readline;
-    const parser = new Readline({
+    const parser = new ReadlineParser({
         encoding: 'utf8',
         delimiter: delimiter,
         includeDelimiter: false,
     });
-    const serialPortOptions: SerialPort.OpenOptions = {
-        baudRate: baudRate,
-        highWaterMark: 1024 * 128, // 128k
-        autoOpen: false,
-    };
-    const port = new SerialPort(uartPort, serialPortOptions, (err) => {
-        if (err) return console.log('Error: ', err.message);
-    });
+
+    const port = new SerialPort(
+        {
+            path: uartPort,
+            baudRate,
+            highWaterMark: 1024 * 128, // 128k
+            autoOpen: false,
+        },
+        (err) => {
+            if (err) return console.log('Error: ', err.message);
+        },
+    );
+
     port.pipe(parser);
 
     const writeToBuffer = (data: string, wait: number = 2000): Promise<{ ok: boolean; data: string[] }> =>
@@ -88,6 +92,7 @@ export async function createSerialConnection({
                     if (err) {
                         return reject(err);
                     }
+
                     const outputAsArray = String(outputData)
                         .split('\r\n')
                         .filter((val) => !val.includes(data.trim()))
@@ -101,7 +106,7 @@ export async function createSerialConnection({
                 outputData += data;
             });
 
-            port.on('close', (code) => {
+            port.on('close', (code: number | null) => {
                 if (code === null || code === 0) {
                     console.log(`🚀 | outputData`, outputData);
                     const outputAsArray = String(outputData)

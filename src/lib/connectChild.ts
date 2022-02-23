@@ -1,4 +1,4 @@
-import type { output } from './types';
+import type { output } from '../types';
 import { createSerialConnection } from './createSerialConnection';
 
 const UART_PORT = '/dev/ttyUSB1';
