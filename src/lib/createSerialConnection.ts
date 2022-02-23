@@ -1,150 +1,59 @@
-import { SerialPort, ReadlineParser } from 'serialport';
+import { autoDetect, LinuxBinding } from '@serialport/bindings-cpp';
 import type { createSerialConnectionProps, output, WriteDatasetProps } from '../types';
 import { sleep } from './utils';
 
-interface createSerialConnectionReturnType {
-    port: SerialPort;
+/** @description Create Serial Connection.*/
+export async function createSerialConnection({ uartPort, delimiter, baudRate }: createSerialConnectionProps) {
+    const options = { path: uartPort, baudRate, highWaterMark: 1024 * 128, autoOpen: false };
 
-    /** @description: Factory Reset the thread device. */
-    factoryReset(): Promise<void>;
+    const port = await LinuxBinding.open(options);
 
-    /**
-     * @description: Check the state of the device.
-     * @param {string} type - Type of device.
-     * @default type 'leader'
-     */
-    checkState(type?: 'leader' | 'child'): Promise<output>;
+    /** @description Write and drain the port. */
+    async function writeToBuffer(input: string): Promise<output> {
+        if (!port.isOpen) {
+            throw new Error('Port is not open');
+        }
 
-    /**
-     * @description: Check the initial state of the device.
-     * @param {string} type - Type of device.
-     * @default type 'leader'
-     */
-    checkInitialState(type?: 'leader' | 'child'): Promise<output>;
+        await port.write(Buffer.from(input + '\n'));
 
-    /** @description: Start IPv6 interface. */
-    startIfconfig(): Promise<boolean>;
+        const inputBuffer = Buffer.alloc(163840);
 
-    /** @description: Start Thread. */
-    startThread(): Promise<boolean>;
+        const data = await port.read(inputBuffer, 0, 16384);
+        // Buffer.console.log(`🚀 | file: createSerialConnection.ts | line 24 | data.buffer`, String(data.buffer));
 
-    /** @description: Check Ipv6 addresses. */
-    ipaddr(): Promise<output>;
+        console.log(`🚀 | file: createSerialConnection.ts | line 25 | String(data.buffer)`, String(data.buffer));
 
-    /** @description: Write and drain the port. */
-    writeToBuffer: (data: string, wait?: number) => Promise<output>;
+        const outputAsArray = String(data.buffer)
+            .split('\r\n')
+            .filter((val) => !val.includes(input.trim()))
+            .filter((val) => val !== '>' && val !== '> ');
+        // .filter((val) => !val.includes('\x00'));
+
+        // await port.flush();
+        // await port.drain();
+        return { data: outputAsArray, ok: outputAsArray.includes('Done') };
+    }
+
+    /** @description Factory Reset the thread device. */
+    async function factoryReset(): Promise<void> {
+        console.log('factoryreset');
+        await writeToBuffer('factoryreset');
+        await sleep(3000);
+        await writeToBuffer('');
+        await writeToBuffer('');
+        return;
+    }
 
     /**
      * @description Check the state of the device.
      * @param {WriteDatasetProps} {masterKey, networkName, channel}
      */
-    writeDataset(props: WriteDatasetProps): Promise<output>;
-}
-
-const clearEventListeners = (port: SerialPort): void => {
-    port.removeAllListeners('data');
-    port.removeAllListeners('close');
-};
-
-/**
- * @description: Create Serial Connection.
- */
-export async function createSerialConnection({
-    uartPort,
-    delimiter = '\r\n',
-    baudRate = 115200,
-}: createSerialConnectionProps): Promise<createSerialConnectionReturnType> {
-    const parser = new ReadlineParser({
-        encoding: 'utf8',
-        delimiter: delimiter,
-        includeDelimiter: false,
-    });
-
-    const port = new SerialPort(
-        {
-            path: uartPort,
-            baudRate,
-            highWaterMark: 1024 * 128, // 128k
-            autoOpen: false,
-        },
-        (err) => {
-            if (err) return console.log('Error: ', err.message);
-        },
-    );
-
-    port.pipe(parser);
-
-    const writeToBuffer = (data: string, wait: number = 2000): Promise<{ ok: boolean; data: string[] }> =>
-        new Promise((resolve, reject) => {
-            let outputData = '';
-            port.open((err) => {
-                if (err) {
-                    return reject(err);
-                }
-            });
-            console.log(`writing ${data}`);
-
-            port.write(data + '\n');
-            port.drain();
-
-            sleep(wait).then(() => {
-                port.close((err) => {
-                    if (err) {
-                        return reject(err);
-                    }
-
-                    const outputAsArray = String(outputData)
-                        .split('\r\n')
-                        .filter((val) => !val.includes(data.trim()))
-                        .filter((val) => !val.includes('>'));
-
-                    resolve({ ok: outputAsArray.includes('Done'), data: outputAsArray });
-                });
-            });
-
-            port.on('data', (data) => {
-                outputData += data;
-            });
-
-            port.on('close', (code: number | null) => {
-                if (code === null || code === 0) {
-                    console.log(`🚀 | outputData`, outputData);
-                    const outputAsArray = String(outputData)
-                        .split('\r\n')
-                        .filter((val) => !val.includes(data.trim()))
-                        .filter((val) => val !== '>')
-                        .filter((val) => val !== '> ');
-
-                    resolve({
-                        ok: outputAsArray.includes('Done'),
-                        data: outputAsArray.filter((val) => !val.includes('Done')),
-                    });
-                } else {
-                    reject(code);
-                }
-            });
-        });
-
-    const factoryReset = async (): Promise<void> => {
-        console.log('factoryreset');
-
-        await writeToBuffer('factoryreset');
-
-        await sleep(3000);
-
-        await writeToBuffer('');
-        await writeToBuffer('');
-
-        clearEventListeners(port);
-        return;
-    };
-
-    const writeDataset = async ({
+    async function writeDataset({
         masterKey,
         networkName,
         type = 'leader',
         panid,
-    }: WriteDatasetProps): Promise<output> => {
+    }: WriteDatasetProps): Promise<output> {
         console.log('writing dataset');
 
         const clear = await writeToBuffer('dataset clear');
@@ -170,12 +79,15 @@ export async function createSerialConnection({
 
         const checkActiveDataset = await writeToBuffer('dataset active');
 
-        clearEventListeners(port);
-
         return checkActiveDataset;
-    };
+    }
 
-    const checkState = async (type: 'leader' | 'child' = 'leader') => {
+    /**
+     * @description Check the state of the device.
+     * @param {string} type - Type of device.
+     * @default type 'leader'
+     */
+    async function checkState(type: 'leader' | 'child' = 'leader') {
         await sleep(1000);
         const cmd = 'state';
         let data: output;
@@ -189,44 +101,46 @@ export async function createSerialConnection({
             data = await writeToBuffer(cmd);
         }
 
-        clearEventListeners(port);
-
         return data;
-    };
+    }
 
-    const checkInitialState = async () => {
+    /**
+     * @description Check the initial state of the device.
+     * @param {string} type - Type of device.
+     * @default type 'leader'
+     */
+    async function checkInitialState() {
         await sleep(1000);
         const data = await writeToBuffer('state');
-        clearEventListeners(port);
-        return data;
-    };
 
-    const startIfconfig = async () => {
+        return data;
+    }
+
+    /** @description Start IPv6 interface. */
+    async function startIfconfig() {
         await sleep(1000);
         const data = await writeToBuffer('ifconfig up');
-        clearEventListeners(port);
-        return data.ok;
-    };
 
-    const startThread = async () => {
+        return data.ok;
+    }
+
+    /** @description Start Thread. */
+    async function startThread() {
         await sleep(1000);
         const cmd = 'thread start';
         const data = await writeToBuffer(cmd);
 
-        clearEventListeners(port);
-
         return data.ok;
-    };
+    }
 
-    const ipaddr = async () => {
+    /** @description Check Ipv6 addresses. */
+    async function ipaddr() {
         await sleep(1000);
         const cmd = 'ipaddr';
         const data = await writeToBuffer(cmd);
 
-        clearEventListeners(port);
-
         return data;
-    };
+    }
 
     return {
         port,

@@ -1,42 +1,17 @@
 {
     "compilerOptions": {
-        "target": "ES5",
-        "module": "CommonJS",
-        "lib": ["ES2015", "dom", "ES2015.Iterable"],
-        "outDir": "dist",
-        "downlevelIteration": true,
-        "noImplicitAny": true,
-        "strictNullChecks": true,
-        "noImplicitThis": true,
-        "experimentalDecorators": true,
-        "emitDecoratorMetadata": true,
-        "allowUnreachableCode": false,
-
-        "allowJs": false,
-        "checkJs": false,
-        "skipLibCheck": true,
-        "strict": true,
-        "allowSyntheticDefaultImports": true,
-
-        /* Module Resolution */
-        "esModuleInterop": true,
-        "moduleResolution": "Node",
-        "resolveJsonModule": true,
-        "isolatedModules": true,
-
-        /* Type Checking */
-        "noUnusedLocals": true,
-        "noUnusedParameters": true,
-        "noImplicitReturns": false,
-        "noFallthroughCasesInSwitch": true,
-        "forceConsistentCasingInFileNames": true,
-
-        "removeComments": true,
-        "newLine": "lf",
-
-        "jsx": "preserve",
-        "declaration": true
+        "baseUrl": ".",
+        "lib": ["es2016"],
+        "paths": {
+            "*": ["src/*"]
+        },
+        "allowJs": true,
+        "target": "es2016",
+        "module": "commonjs",
+        "moduleResolution": "node",
+        "sourceMap": true,
+        "outDir": "./dist"
     },
-    "include": ["src/**/*.ts"],
-    "exclude": ["node_modules", "dist", "**/*.spec.ts"]
+    "include": ["./src/**/*.ts"],
+    "exclude": ["node_modules"]
 }
