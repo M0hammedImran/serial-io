@@ -1,5 +1,5 @@
 import { output } from '../types';
-import { createSerialConnection } from './createSerialConnection';
+import { SerialConnection } from './SerialConnection';
 import { hex2str } from './utils';
 
 const UART_PORT = '/dev/ttyS0';
@@ -14,7 +14,7 @@ export async function createLeaderNode() {
         baudRate: BaudRate,
     };
 
-    const serial = await createSerialConnection(OPTIONS);
+    const serial = new SerialConnection(OPTIONS);
 
     let state = await serial.checkInitialState();
 

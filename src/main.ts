@@ -1,5 +1,5 @@
 import { createLeaderNode } from './lib/createLeader';
-import { createSerialConnection } from './lib/createSerialConnection';
+import { SerialConnection } from './lib/SerialConnection';
 
 import { fastify } from 'fastify';
 import blipp from 'fastify-blipp';
@@ -31,7 +31,7 @@ app.register(helmet);
 
 // Declare a route
 app.get('/', async (_request, reply) => {
-    const serial = await createSerialConnection({ uartPort: '/dev/ttyUSB0', baudRate: 115200, delimiter: '\r\n' });
+    const serial = new SerialConnection({ uartPort: '/dev/ttyUSB0', baudRate: 115200 });
     const message = JSON.stringify({ ok: true, statusCode: 200 });
     const dataset = await serial.writeToBuffer('dataset active');
     // const data = await serial.writeToBuffer(message);

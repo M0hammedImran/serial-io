@@ -8,8 +8,6 @@ export interface WriteDatasetProps {
 export interface createSerialConnectionProps {
     /** @example '/dev/ttyS0 */
     uartPort: string;
-    /** @example '\r\n' */
-    delimiter?: string;
     /** @example 115200 */
     baudRate?: number;
 }
