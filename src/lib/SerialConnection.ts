@@ -21,24 +21,24 @@ export class SerialConnection {
 
         await this.port.write(Buffer.from(input + '\n'));
 
-        const inputBuffer = Buffer.alloc(16384 * 10);
+        const inputBuffer = Buffer.alloc(2 ** 16);
 
-        const data = await this.port.read(inputBuffer, 0, 16384);
-        const stringBuffer = String(data.buffer);
+        const data = await this.port.read(inputBuffer, 0, 2 ** 14);
+        const stringBuffer = String(data.buffer).replaceAll('\x00', '').trimEnd();
 
-        console.log(stringBuffer);
         const outputAsArray = stringBuffer
             .split('\r\n')
             .filter((val) => !val.includes(input.trim()))
-            .filter((val) => val !== '>' && val !== '> ')
-            .filter((val) => !val.includes('\x00'));
+            .filter((val) => val !== '>' && val !== '> ');
 
+        console.log({ outputAsArray });
+
+        this.port.close();
         return { data: outputAsArray, ok: outputAsArray.includes('Done') };
     }
 
     /** @description Factory Reset the thread device. */
     async factoryReset() {
-        console.log('factoryreset');
         await this.writeToBuffer('factoryreset');
         await sleep(3000);
         await this.writeToBuffer('');
@@ -51,14 +51,11 @@ export class SerialConnection {
      * @param {WriteDatasetProps} {masterKey, networkName, channel}
      */
     async writeDataset({ masterKey, networkName, type = 'leader', panid }: WriteDatasetProps): Promise<output> {
-        console.log('writing dataset');
-
         const clear = await this.writeToBuffer('dataset clear');
         if (!clear.ok) throw new Error('Failed to clear dataset');
 
         if (type === 'leader') {
             const init = await this.writeToBuffer(`dataset init new`);
-            console.log(`🚀 | file: createSerialConnection.ts | line 144 | init`, init);
             if (!init.ok) throw new Error('Failed to init dataset');
         }
 
@@ -85,7 +82,6 @@ export class SerialConnection {
      * @default type 'leader'
      */
     async checkState(type: 'leader' | 'child' = 'leader') {
-        await sleep(1000);
         const cmd = 'state';
         let data: output;
         data = await this.writeToBuffer(cmd);
@@ -101,29 +97,20 @@ export class SerialConnection {
         return data;
     }
 
-    /**
-     * @description Check the initial state of the device.
-     * @param {string} type - Type of device.
-     * @default type 'leader'
-     */
-    async checkInitialState() {
-        await sleep(1000);
+    /** @description Check the initial state of the device. */
+    async checkInitialState(): Promise<output> {
         const data = await this.writeToBuffer('state');
-
         return data;
     }
 
     /** @description Start IPv6 interface. */
     async startIfconfig() {
-        await sleep(1000);
         const data = await this.writeToBuffer('ifconfig up');
-
         return data.ok;
     }
 
     /** @description Start Thread. */
     async startThread() {
-        await sleep(1000);
         const cmd = 'thread start';
         const data = await this.writeToBuffer(cmd);
 
@@ -132,7 +119,6 @@ export class SerialConnection {
 
     /** @description Check Ipv6 addresses. */
     async ipaddr() {
-        await sleep(1000);
         const cmd = 'ipaddr';
         const data = await this.writeToBuffer(cmd);
 

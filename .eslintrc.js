@@ -3,12 +3,12 @@ module.exports = {
         es2021: true,
         node: true,
     },
-    extends: ['plugin:import/recommended', 'plugin:import/typescript'],
-    parser: '@typescript-eslint/parser',
     parserOptions: {
         ecmaVersion: 13,
         sourceType: 'module',
     },
+    parser: '@typescript-eslint/parser',
+    extends: ['eslint/recommended', 'plugin:import/recommended', 'plugin:import/typescript'],
     plugins: ['@typescript-eslint'],
     rules: {
         indent: ['warn', 4],
