@@ -1,51 +1,42 @@
-import dayjs = require('dayjs');
-import type { FastifyInstance } from 'fastify';
 import { fastify } from 'fastify';
-import blipp from 'fastify-blipp';
+import fastifyBlipp from 'fastify-blipp';
 import cors from 'fastify-cors';
-import Etag from 'fastify-etag';
-import helmet from 'fastify-helmet';
-import type { IncomingMessage, Server, ServerResponse } from 'http';
-import { getNodes, START_TARGET } from './lib/utils';
+import fastifyEtag from 'fastify-etag';
+import fastifyHelmet from 'fastify-helmet';
 import { createLeaderNode } from './lib/createLeader';
 import { SerialConnection } from './lib/SerialConnection';
+import { setGunAttributes, SetGunAttributesProps, START_TARGET } from './lib/utils';
 
-const app: FastifyInstance<Server, IncomingMessage, ServerResponse> = fastify({
-    logger: {
-        prettyPrint: {
-            colorize: true,
-            translateTime: dayjs().format('YYYY-MM-DD HH:mm:ss'),
-            ignore: 'pid,hostname,v',
-            levelFirst: true,
-        },
-    },
+const app = fastify();
+
+app.register(cors, {
+    origin: '*',
+    allowedHeaders: '*',
+    credentials: false,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    preflight: true,
 });
+app.register(fastifyBlipp);
+app.register(fastifyEtag);
+app.register(fastifyHelmet);
 
-app.register(blipp);
-app.register(Etag);
-app.register(cors, { origin: '*' });
-app.register(helmet);
-
-const LEADER_PORT = '/dev/ttyUSB0';
+const LEADER_PORT = '/dev/ttyUSB1';
 const BAUD_RATE = 115200;
 
-// await serial.writeToBuffer(`udp send fdde:ad00:beef:0:105:f1f0:de18:3726 234 ${message}`);
+let serial: SerialConnection | null = null;
 
-// Declare a route
-app.get('/', async (_request, reply) => {
-    const serial = new SerialConnection({ uartPort: LEADER_PORT, baudRate: 115200 });
+app.get('/', async () => {
+    serial = new SerialConnection({ uartPort: LEADER_PORT, baudRate: 115200 });
 
-    const message = JSON.stringify({ ok: true, statusCode: 200 });
     const dataset = await serial.writeToBuffer('dataset active');
-    console.log(JSON.stringify({ dataset }, null, 2));
-    return reply.code(200).send({ message, ok: true });
+
+    console.dir(dataset, { depth: null });
+    return { ok: true };
 });
 
-app.get('/devices', async (_request, _reply) => {
+app.get('/devices', async () => {
     const leader = await createLeaderNode({ baudRate: BAUD_RATE, uartPort: LEADER_PORT });
-
     const data = await leader.getDevices();
-    console.log(`🚀 | file: main.ts | line 14 | data`, data);
     return { data: data, ok: true, statusCode: 200 };
 });
 
@@ -53,27 +44,45 @@ interface GetDeviceByIdRequestProps {
     Params: { id: string };
 }
 
-app.get<GetDeviceByIdRequestProps>('/devices/:id', async (request, _reply) => {
+app.get<GetDeviceByIdRequestProps>('/devices/:id', async (request) => {
     const { id } = request.params;
 
-    // const data = await getDevice(id);
+    // const leader = await createLeaderNode({ baudRate: BAUD_RATE, uartPort: LEADER_PORT });
+    // const data = await leader.getDevice(id);
     return { data: id, ok: true, statusCode: 200 };
 });
 
-app.get('/client', async (_request, _reply) => {
-    const leader = await createLeaderNode({ baudRate: BAUD_RATE, uartPort: LEADER_PORT });
+interface PostToConfigGun {
+    Body: {
+        target: string;
+        config: SetGunAttributesProps;
+    };
+}
 
-    const data = await leader.getDevices();
+interface PostToConfigTarget {
+    Body: { target: string };
+}
 
-    return { data: data, ok: true, statusCode: 200 };
+app.post<PostToConfigGun>('/gun', async (request) => {
+    const { target, config: gunConfig } = request.body;
+
+    if (!serial) {
+        serial = new SerialConnection({ baudRate: BAUD_RATE, uartPort: LEADER_PORT });
+    }
+
+    const config = setGunAttributes(gunConfig);
+
+    console.log(await serial.writeToBuffer(`udp send ${target} 234 ${config}`));
+    return { ok: true, statusCode: 200 };
 });
 
-app.post<{ Body: { target: string } }>('/target', async (request, _reply) => {
-    const target = request.body.target;
+app.post<PostToConfigTarget>('/target', async (request) => {
+    const { target } = request.body;
+    if (!serial) {
+        serial = new SerialConnection({ baudRate: BAUD_RATE, uartPort: LEADER_PORT });
+    }
 
-    const serial = new SerialConnection({ baudRate: BAUD_RATE, uartPort: LEADER_PORT });
-
-    serial.writeToBuffer(`udp send ${target} 234 ${START_TARGET}`);
+    console.log(await serial.writeToBuffer(`udp send ${target} 234 ${START_TARGET}`));
 
     return { ok: true, statusCode: 200 };
 });
@@ -81,13 +90,11 @@ app.post<{ Body: { target: string } }>('/target', async (request, _reply) => {
 /** entry function */
 async function main() {
     try {
-        await app.listen(4337, '0.0.0.0');
+        console.log(await app.listen(4337, '127.0.0.1'));
 
-        console.table(await getNodes());
-
+        // console.table(await getNodes());
         app.blipp();
     } catch (error) {
-        console.log(error);
         app.log.error(error);
         process.exit(1);
     }

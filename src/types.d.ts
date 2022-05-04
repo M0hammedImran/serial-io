@@ -3,6 +3,8 @@ export interface WriteDatasetProps {
     networkName: string;
     type: 'leader' | 'child';
     panid?: number;
+    CHANNEL: string;
+    EXT_PAN_ID: string;
 }
 
 export interface createSerialConnectionProps {

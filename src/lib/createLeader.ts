@@ -1,37 +1,51 @@
-import { output } from '../types';
+// import { WriteDatasetProps } from '../types';
 import { SerialConnection } from './SerialConnection';
-import { hex2str, INFO, sleep } from './utils';
+import { sleep } from './utils';
 
 interface CreateLeaderNodeProps {
     uartPort: string;
     baudRate: number;
 }
 
+// Master Key: 1234c0de1ab51234c0de1ab51234c0de
+// Network Name: SleepyEFR32
+// PAN ID: 08ae
+
+// const MASTER_KEY = '1234C0DE1AB51234C0DE1AB51234C0DE';
+// const NETWORK_NAME = 'SleepyEFR32';
+// const PAN_ID = 0x2222;
+// const CHANNEL = '15';
+// const EXT_PAN_ID = 'C0DE1AB5C0DE1AB5';
+
+// const LEADER_CONFIG: WriteDatasetProps = {
+//     masterKey: MASTER_KEY,
+//     networkName: NETWORK_NAME,
+//     panid: PAN_ID,
+//     CHANNEL,
+//     EXT_PAN_ID,
+//     type: 'leader',
+// };
+
 /** @description Create a Leader Node */
 export async function createLeaderNode(options: CreateLeaderNodeProps) {
+    let retry = 0;
     const serial = new SerialConnection(options);
 
-    let state = await serial.checkInitialState();
-    console.log({ state });
-
-    const dataset = await serial.writeToBuffer('dataset active');
-    console.log({ dataset });
+    let state = await serial.checkState('leader');
+    console.dir(state, { depth: null });
 
     if (!state.data.includes('leader')) {
+        // await serial.writeDataset(LEADER_CONFIG);
         await serial.startIfconfig();
         await serial.startThread();
         await serial.ipaddr();
     }
 
-    let retry = 0;
-
     while (!state.data.includes('leader')) {
-        if (retry > 5) {
-            break;
-        }
+        if (retry > 5) break;
 
         await sleep(500 * retry);
-        state = await serial.checkState();
+        state = await serial.checkState('leader');
         retry += 1;
     }
 
@@ -40,42 +54,42 @@ export async function createLeaderNode(options: CreateLeaderNodeProps) {
     }
 
     const getDevices = async () => {
-        const data: DeviceData[] = [];
         const output = await serial.writeToBuffer('childip');
+
+        console.log(`⚓️ | output`, output);
 
         if (output.data.length < 2) {
             throw new Error('No Children connected');
         }
 
-        console.log(`🚀 | output.data.length`, output.data.length);
-
         const devices = output.data
-            .slice(0, output.data.length - 1)
+            ?.slice(0, output.data.length - 1)
             ?.map((device) => device.split(' ')[1])
-            .filter(Boolean);
+            ?.filter(Boolean)
+            .map((device) => ({ ip: device }));
 
         if (devices.length === 0) {
             throw new Error('No Children connected');
         }
 
-        for (let i = 0; i < devices.length; i++) {
-            const device = devices[i];
+        // for (let i = 0; i < devices.length; i++) {
+        //     const device = devices[i];
 
-            if (!device) continue;
+        //     // if (!device) continue;
 
-            const { ok } = await serial.writeToBuffer(`udp send ${device} 234 ${INFO}`);
-            if (!ok) continue;
+        //     // const { ok } = await serial.writeToBuffer(`udp send ${device} 234 ${INFO}`);
+        //     // if (!ok) continue;
 
-            data.push({ ip: device });
-        }
+        //     data.push({ ip: device });
+        // }
 
-        return data;
+        return devices;
     };
 
     return { getDevices };
 }
 
-interface DeviceData {
-    ip: string;
-    type?: Record<string, any>;
-}
+// interface DeviceData {
+//     ip: string;
+//     type?: Record<string, any>;
+// }

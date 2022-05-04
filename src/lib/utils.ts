@@ -27,20 +27,20 @@ export async function getNodes() {
         .map((device) => ({ path: device.path, pnpId: device.pnpId }));
 }
 
-export const INFO = `{info:type}`;
+export const INFO = `info,type`;
 
-export const START_GUN = `{CC:start}`;
-export const STOP_GUN = `{CC:stop}`;
+export const START_GUN = `GC,start`;
+export const STOP_GUN = `GC,stop`;
 
-export const STOP_TARGET = `{HC:stop}`;
-export const START_TARGET = `{HC:start}`;
+export const STOP_TARGET = `HC,stop`;
+export const START_TARGET = `HC,start`;
 
 // export const ACTIVATE_TARGET = `{HC:activate}`;
 export const setActiveDuration = (duration: number) => `HC:${duration}`;
 
-interface SetGunAttributesProps {
+export interface SetGunAttributesProps {
     ammo_count: string | number;
-    mag_count?: string | number;
+    mag_count: string | number;
     trigger_rate?: string | number;
     reload_delay?: string | number;
     range?: string | number;
@@ -60,8 +60,9 @@ export const setGunAttributes = ({
     respawn_count = '',
     respawn_delay = '',
     haptic_level = '',
-}: SetGunAttributesProps) =>
-    `GV:${ammo_count},${mag_count},${trigger_rate},${reload_delay},${range},${bullet_id},${respawn_count},${respawn_delay},${haptic_level}`;
+}: SetGunAttributesProps) => {
+    return `GC,${ammo_count},${mag_count},${trigger_rate},${reload_delay},${range},${bullet_id},${respawn_count},${respawn_delay},${haptic_level}`;
+};
 
 /* 
     const setGunAttributes = ({

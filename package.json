@@ -14,9 +14,9 @@
         "build": "tsc -p .",
         "format": "prettier --write '**/*.@(js|ts|tsx|json|md|yml)'",
         "clean:dep": "rm -rf node_modules dist",
-        "lint:fix": "eslint ./src --ext .jsx,.js,.ts,.tsx --quiet --fix --ignore-path ../.gitignore",
+        "lint:fix": "eslint ./src --ext .jsx,.js,.ts,.tsx --quiet --fix --ignore-path .gitignore",
         "lint:format": "prettier  --loglevel warn --write \"./**/*.{js,jsx,ts,tsx,css,md,json}\" ",
-        "lint": "yarn lint:format && yarn lint:fix ",
+        "lint": "npm run lint:format && npm run lint:fix ",
         "type-check": "tsc"
     },
     "dependencies": {
@@ -36,7 +36,7 @@
         "@typescript-eslint/eslint-plugin": "^5.12.1",
         "@typescript-eslint/parser": "^5.12.1",
         "eslint": "^8.9.0",
-        "eslint-plugin-import": "^2.25.4",
+        "eslint-plugin-prettier": "^4.0.0",
         "pino-pretty": "^7.5.1",
         "prettier": "^2.5.1",
         "ts-node": "^10.5.0",

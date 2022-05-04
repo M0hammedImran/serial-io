@@ -12,7 +12,8 @@ export class SerialConnection {
     }
 
     /** @description Write and drain the port. */
-    public async writeToBuffer(input: string): Promise<output> {
+    public async writeToBuffer(input: string) {
+        console.log(`⚓️ | input`, input);
         this.port = await LinuxBinding.open(this.options);
 
         if (!this.port.isOpen) {
@@ -21,17 +22,16 @@ export class SerialConnection {
 
         await this.port.write(Buffer.from(input + '\n'));
 
-        const inputBuffer = Buffer.alloc(2 ** 16);
+        const inputBuffer = Buffer.alloc(2 ** 17);
 
-        const data = await this.port.read(inputBuffer, 0, 2 ** 14);
-        const stringBuffer = String(data.buffer).replaceAll('\x00', '').trimEnd();
+        const data = await this.port.read(inputBuffer, 0, 2 ** 15);
+
+        const stringBuffer = String(data.buffer).replaceAll('\x00', '').trim();
 
         const outputAsArray = stringBuffer
             .split('\r\n')
             .filter((val) => !val.includes(input.trim()))
             .filter((val) => val !== '>' && val !== '> ');
-
-        console.log({ outputAsArray });
 
         this.port.close();
         return { data: outputAsArray, ok: outputAsArray.includes('Done') };
@@ -50,7 +50,14 @@ export class SerialConnection {
      * @description Check the state of the device.
      * @param {WriteDatasetProps} {masterKey, networkName, channel}
      */
-    async writeDataset({ masterKey, networkName, type = 'leader', panid }: WriteDatasetProps): Promise<output> {
+    async writeDataset({
+        masterKey,
+        networkName,
+        type = 'leader',
+        panid,
+        CHANNEL,
+        EXT_PAN_ID,
+    }: WriteDatasetProps): Promise<output> {
         const clear = await this.writeToBuffer('dataset clear');
         if (!clear.ok) throw new Error('Failed to clear dataset');
 
@@ -59,14 +66,19 @@ export class SerialConnection {
             if (!init.ok) throw new Error('Failed to init dataset');
         }
 
-        const setMasterKey = await this.writeToBuffer(`dataset masterkey ${masterKey}`);
-        if (!setMasterKey.ok) throw new Error('Failed to set masterKey');
+        await this.writeToBuffer(`dataset help`);
+
+        const setMasterKey = await this.writeToBuffer(`dataset networkkey ${masterKey}`);
+        if (!setMasterKey.ok) throw new Error('Failed to set networkkey');
 
         const setNetworkName = await this.writeToBuffer(`dataset networkname ${networkName}`);
         if (!setNetworkName.ok) throw new Error('Failed to set networkName');
 
         const setPanid = await this.writeToBuffer(`dataset panid ${panid}`);
         if (!setPanid.ok) throw new Error('Failed to set networkName');
+
+        await this.writeToBuffer(`dataset channel ${CHANNEL}`);
+        await this.writeToBuffer(`dataset extpanid ${EXT_PAN_ID}`);
 
         const commitActive = await this.writeToBuffer('dataset commit active');
         if (!commitActive.ok) throw new Error('Failed to commit active dataset');
@@ -81,7 +93,7 @@ export class SerialConnection {
      * @param {string} type - Type of device.
      * @default type 'leader'
      */
-    async checkState(type: 'leader' | 'child' = 'leader') {
+    async checkState(type: 'leader' | 'child') {
         const cmd = 'state';
         let data: output;
         data = await this.writeToBuffer(cmd);
@@ -94,12 +106,6 @@ export class SerialConnection {
             data = await this.writeToBuffer(cmd);
         }
 
-        return data;
-    }
-
-    /** @description Check the initial state of the device. */
-    async checkInitialState(): Promise<output> {
-        const data = await this.writeToBuffer('state');
         return data;
     }
 

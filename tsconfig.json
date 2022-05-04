@@ -2,10 +2,11 @@
     "compilerOptions": {
         "lib": ["es2021"],
         "allowJs": true,
-        "target": "es2016",
+        "target": "es2017",
         "module": "commonjs",
         "moduleResolution": "node",
         "sourceMap": true,
+        "esModuleInterop": true,
         "outDir": "./dist"
     },
     "include": ["./src/**/*.ts"],
