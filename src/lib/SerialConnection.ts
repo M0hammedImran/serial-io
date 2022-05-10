@@ -22,7 +22,10 @@ export class SerialConnection {
         await this.port.write(Buffer.from(input + '\n'));
 
         const inputBuffer = Buffer.alloc(2 ** 17);
+
         await this.port.drain();
+        await sleep(500);
+
         const data = await this.port.read(inputBuffer, 0, 2 ** 15);
 
         const stringBuffer = String(data.buffer).replaceAll('\x00', '').trim();

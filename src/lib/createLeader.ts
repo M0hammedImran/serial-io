@@ -27,9 +27,8 @@ interface CreateLeaderNodeProps {
 // };
 
 /** @description Create a Leader Node */
-export async function createLeaderNode(options: CreateLeaderNodeProps) {
+export async function createLeaderNode(options: CreateLeaderNodeProps, serial: SerialConnection) {
     let retry = 0;
-    const serial = new SerialConnection(options);
 
     let state = await serial.checkState('leader');
     console.dir(state, { depth: null });

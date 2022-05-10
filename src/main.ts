@@ -26,7 +26,7 @@ const BAUD_RATE = 115200;
 let serial: SerialConnection | null = null;
 
 app.get('/', async () => {
-    serial = new SerialConnection({ uartPort: LEADER_PORT, baudRate: 115200 });
+    if (!serial) serial = new SerialConnection({ uartPort: LEADER_PORT, baudRate: 115200 });
     // console.log('hello');
 
     // console.log(await sendSync(port, 'dataset active'));
@@ -37,7 +37,8 @@ app.get('/', async () => {
 });
 
 app.get('/devices', async () => {
-    const leader = await createLeaderNode({ baudRate: BAUD_RATE, uartPort: LEADER_PORT });
+    if (!serial) serial = new SerialConnection({ uartPort: LEADER_PORT, baudRate: 115200 });
+    const leader = await createLeaderNode({ baudRate: BAUD_RATE, uartPort: LEADER_PORT }, serial);
     const data = await leader.getDevices();
     return { data: data, ok: true, statusCode: 200 };
 });
