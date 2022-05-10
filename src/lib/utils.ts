@@ -27,7 +27,7 @@ export async function getNodes() {
         .map((device) => ({ path: device.path, pnpId: device.pnpId }));
 }
 
-export const INFO = `info,type`;
+export const INFO = `type`;
 
 export const START_GUN = `GC,start`;
 export const STOP_GUN = `GC,stop`;

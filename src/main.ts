@@ -20,7 +20,7 @@ app.register(fastifyBlipp);
 app.register(fastifyEtag);
 app.register(fastifyHelmet);
 
-const LEADER_PORT = '/dev/ttyUSB1';
+const LEADER_PORT = '/dev/ttyUSB0';
 const BAUD_RATE = 115200;
 
 let serial: SerialConnection | null = null;
@@ -28,9 +28,9 @@ let serial: SerialConnection | null = null;
 app.get('/', async () => {
     serial = new SerialConnection({ uartPort: LEADER_PORT, baudRate: 115200 });
 
-    const dataset = await serial.writeToBuffer('dataset active');
+    const config = setGunAttributes({ ammo_count: 50, mag_count: 1 });
 
-    console.dir(dataset, { depth: null });
+    console.log(await serial.writeToBuffer(`udp send ${'fdde:ad00:beef:0:b72c:ffff:8c18:cfa'} 234 ${config}`));
     return { ok: true };
 });
 

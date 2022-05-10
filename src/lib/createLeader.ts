@@ -75,10 +75,10 @@ export async function createLeaderNode(options: CreateLeaderNodeProps) {
         // for (let i = 0; i < devices.length; i++) {
         //     const device = devices[i];
 
-        //     // if (!device) continue;
+        // if (!device) continue;
 
-        //     // const { ok } = await serial.writeToBuffer(`udp send ${device} 234 ${INFO}`);
-        //     // if (!ok) continue;
+        // const { ok } = await serial.writeToBuffer(`udp send ${device} 234 ${INFO}`);
+        // if (!ok) continue;
 
         //     data.push({ ip: device });
         // }
