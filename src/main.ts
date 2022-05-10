@@ -1,8 +1,8 @@
 import { fastify } from 'fastify';
 import fastifyBlipp from 'fastify-blipp';
-import cors from 'fastify-cors';
-import fastifyEtag from 'fastify-etag';
-import fastifyHelmet from 'fastify-helmet';
+import cors from '@fastify/cors';
+import fastifyEtag from '@fastify/etag';
+import fastifyHelmet from '@fastify/helmet';
 import { createLeaderNode } from './lib/createLeader';
 import { SerialConnection } from './lib/SerialConnection';
 import { setGunAttributes, SetGunAttributesProps, START_TARGET } from './lib/utils';
@@ -27,10 +27,12 @@ let serial: SerialConnection | null = null;
 
 app.get('/', async () => {
     serial = new SerialConnection({ uartPort: LEADER_PORT, baudRate: 115200 });
+    // console.log('hello');
 
-    const config = setGunAttributes({ ammo_count: 50, mag_count: 1 });
+    // console.log(await sendSync(port, 'dataset active'));
+    // const config = setGunAttributes({ ammo_count: 50, mag_count: 1 });
 
-    console.log(await serial.writeToBuffer(`udp send ${'fdde:ad00:beef:0:b72c:ffff:8c18:cfa'} 234 ${config}`));
+    console.log(await serial.writeToBuffer(`dataset active`));
     return { ok: true };
 });
 

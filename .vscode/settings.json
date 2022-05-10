@@ -19,5 +19,5 @@
         "titleBar.inactiveForeground": "#e7e7e799"
     },
     "peacock.color": "#215732",
-    "cSpell.words": ["blipp", "childip", "loglevel", "serializers"]
+    "cSpell.words": ["blipp", "childip", "loglevel", "pino", "serializers"]
 }

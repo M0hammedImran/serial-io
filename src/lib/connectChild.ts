@@ -12,7 +12,7 @@ export async function createChildNode() {
         baudRate: BaudRate,
     };
     const serial = new SerialConnection(OPTIONS);
-    let state = await serial.checkInitialState();
+    let state = await serial.checkState('child');
 
     if (state.data[0] === 'child') {
         await serial.writeToBuffer('coap start');

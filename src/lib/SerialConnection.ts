@@ -4,14 +4,13 @@ import { sleep } from './utils';
 
 /** @description Create Serial Connection.*/
 export class SerialConnection {
-    options: { path: any; baudRate: any; highWaterMark: number; autoOpen: boolean };
+    options: { path: string; baudRate: number; highWaterMark: number; autoOpen: boolean };
     port: LinuxPortBinding;
 
     constructor({ uartPort, baudRate }: createSerialConnectionProps) {
         this.options = { path: uartPort, baudRate, highWaterMark: 1024 * 128, autoOpen: false };
     }
 
-    /** @description Write and drain the port. */
     public async writeToBuffer(input: string) {
         console.log(`⚓️ | input`, input);
         this.port = await LinuxBinding.open(this.options);
@@ -23,7 +22,7 @@ export class SerialConnection {
         await this.port.write(Buffer.from(input + '\n'));
 
         const inputBuffer = Buffer.alloc(2 ** 17);
-
+        await this.port.drain();
         const data = await this.port.read(inputBuffer, 0, 2 ** 15);
 
         const stringBuffer = String(data.buffer).replaceAll('\x00', '').trim();
