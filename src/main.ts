@@ -25,12 +25,6 @@ const BAUD_RATE = 115200;
 
 let serial: SerialConnection | null = null;
 
-if (!serial) {
-    console.log('init serial');
-
-    serial = new SerialConnection({ uartPort: LEADER_PORT, baudRate: 115200 });
-}
-
 // (async () => {
 //     const port = new SerialPort({ baudRate: BAUD_RATE, path: LEADER_PORT });
 
@@ -48,7 +42,7 @@ app.get('/gun', async () => {
     const config = setGunAttributes({ ammo_count: 500, mag_count: 10 });
     const target = 'fdde:ad00:beef:0:b72c:ffff:8c18:cfa';
 
-    console.log(await serial.writeToBuffer(`udp send ${target} 234 ${config}`));
+    console.log(await serial?.writeToBuffer(`udp send ${target} 234 ${config}`));
 
     return { ok: true };
 });
@@ -57,12 +51,18 @@ app.get('/target', async () => {
     const config = 'GC,start';
     const target = 'fdde:ad00:beef:0:d526:a15c:d9ab:84ff';
 
-    console.log(await serial.writeToBuffer(`udp send ${target} 234 ${config}`));
+    console.log(await serial?.writeToBuffer(`udp send ${target} 234 ${config}`));
 
     return { ok: true };
 });
 
 app.get('/devices', async () => {
+    if (!serial) {
+        console.log('init serial');
+
+        serial = new SerialConnection({ uartPort: LEADER_PORT, baudRate: 115200 });
+    }
+
     const leader = await createLeaderNode(serial);
 
     const data = await leader.getDevices();
@@ -123,10 +123,15 @@ async function main() {
     try {
         console.log(await app.listen(4337, '127.0.0.1'));
 
-        // console.table(await getNodes());
+        if (!serial) {
+            console.log('init serial');
+
+            serial = new SerialConnection({ uartPort: LEADER_PORT, baudRate: 115200 });
+        }
+
         app.blipp();
     } catch (error) {
-        app.log.error(error);
+        console.error(error);
         process.exit(1);
     }
 }

@@ -2,7 +2,6 @@
     "name": "serial-app",
     "version": "1.0.0",
     "main": "dist/index.js",
-    "type": "module",
     "license": "MIT",
     "author": {
         "name": "Mohammed Imran",
@@ -21,7 +20,7 @@
     },
     "dependencies": {
         "@fastify/cors": "^7.0.0",
-        "@fastify/etag": "^3.0.0",
+        "@fastify/etag": "^3",
         "@fastify/helmet": "^8.0.0",
         "@serialport/bindings-cpp": "^10.6.3",
         "@serialport/stream": "^10.3.0",
@@ -31,6 +30,7 @@
         "serialport": "^10.3.0"
     },
     "devDependencies": {
+        "@tsconfig/node16": "^1.0.2",
         "@types/node": "^16.11.25",
         "@types/serialport": "^8.0.2",
         "@typescript-eslint/eslint-plugin": "^5.12.1",

@@ -1,13 +1,26 @@
 {
+    "$schema": "https://json.schemastore.org/tsconfig",
+    "display": "Node 16",
+    "extends": "@tsconfig/node16/tsconfig.json",
     "compilerOptions": {
         "lib": ["es2021"],
+        "module": "CommonJS",
+        "target": "ES2015",
+        "moduleResolution": "Node",
+        "outDir": "dist",
+
         "allowJs": true,
-        "target": "es2017",
-        "module": "commonjs",
-        "moduleResolution": "node",
         "sourceMap": true,
         "esModuleInterop": true,
-        "outDir": "./dist"
+        "downlevelIteration": true,
+        "skipLibCheck": true,
+        "sourceRoot": ".",
+
+        "strict": true,
+        "forceConsistentCasingInFileNames": true,
+        "noEmit": false,
+        "resolveJsonModule": true,
+        "isolatedModules": true
     },
     "include": ["./src/**/*.ts"],
     "exclude": ["node_modules"]

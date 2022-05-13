@@ -5,9 +5,9 @@ import { sleep } from './utils';
 /** @description Create Serial Connection.*/
 export class SerialConnection {
     options: { path: string; baudRate: number; highWaterMark: number; autoOpen: boolean };
-    port: LinuxPortBinding;
+    port: LinuxPortBinding | undefined;
 
-    constructor({ uartPort, baudRate }: createSerialConnectionProps) {
+    constructor({ uartPort, baudRate = 115200 }: createSerialConnectionProps) {
         this.options = { path: uartPort, baudRate, highWaterMark: 1024 * 128, autoOpen: false };
     }
 
