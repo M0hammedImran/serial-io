@@ -1,8 +1,8 @@
-import { fastify } from 'fastify';
-import fastifyBlipp from 'fastify-blipp';
 import cors from '@fastify/cors';
 import fastifyEtag from '@fastify/etag';
 import fastifyHelmet from '@fastify/helmet';
+import { fastify } from 'fastify';
+import fastifyBlipp from 'fastify-blipp';
 import { createLeaderNode } from './lib/createLeader';
 import { SerialConnection } from './lib/SerialConnection';
 import { setGunAttributes, SetGunAttributesProps, START_TARGET } from './lib/utils';
@@ -25,21 +25,48 @@ const BAUD_RATE = 115200;
 
 let serial: SerialConnection | null = null;
 
-app.get('/', async () => {
-    if (!serial) serial = new SerialConnection({ uartPort: LEADER_PORT, baudRate: 115200 });
-    // console.log('hello');
+if (!serial) {
+    console.log('init serial');
 
-    // console.log(await sendSync(port, 'dataset active'));
-    // const config = setGunAttributes({ ammo_count: 50, mag_count: 1 });
+    serial = new SerialConnection({ uartPort: LEADER_PORT, baudRate: 115200 });
+}
 
-    console.log(await serial.writeToBuffer(`dataset active`));
+// (async () => {
+//     const port = new SerialPort({ baudRate: BAUD_RATE, path: LEADER_PORT });
+
+//     port?.on('data', (data) => {
+//         console.log(String(data));
+//     });
+
+// })();
+
+app.get('/healthcheck', async () => {
+    return { ok: true };
+});
+
+app.get('/gun', async () => {
+    const config = setGunAttributes({ ammo_count: 500, mag_count: 10 });
+    const target = 'fdde:ad00:beef:0:b72c:ffff:8c18:cfa';
+
+    console.log(await serial.writeToBuffer(`udp send ${target} 234 ${config}`));
+
+    return { ok: true };
+});
+
+app.get('/target', async () => {
+    const config = 'GC,start';
+    const target = 'fdde:ad00:beef:0:d526:a15c:d9ab:84ff';
+
+    console.log(await serial.writeToBuffer(`udp send ${target} 234 ${config}`));
+
     return { ok: true };
 });
 
 app.get('/devices', async () => {
-    if (!serial) serial = new SerialConnection({ uartPort: LEADER_PORT, baudRate: 115200 });
-    const leader = await createLeaderNode({ baudRate: BAUD_RATE, uartPort: LEADER_PORT }, serial);
+    const leader = await createLeaderNode(serial);
+
     const data = await leader.getDevices();
+
     return { data: data, ok: true, statusCode: 200 };
 });
 
@@ -52,6 +79,7 @@ app.get<GetDeviceByIdRequestProps>('/devices/:id', async (request) => {
 
     // const leader = await createLeaderNode({ baudRate: BAUD_RATE, uartPort: LEADER_PORT });
     // const data = await leader.getDevice(id);
+
     return { data: id, ok: true, statusCode: 200 };
 });
 

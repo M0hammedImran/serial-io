@@ -11,22 +11,25 @@ export class SerialConnection {
         this.options = { path: uartPort, baudRate, highWaterMark: 1024 * 128, autoOpen: false };
     }
 
-    public async writeToBuffer(input: string) {
-        console.log(`⚓️ | input`, input);
-        this.port = await LinuxBinding.open(this.options);
-
-        if (!this.port.isOpen) {
-            throw new Error('Port is not open');
+    public async getPort() {
+        if (!this.port || !this.port.isOpen) {
+            this.port = await LinuxBinding.open(this.options);
         }
 
-        await this.port.write(Buffer.from(input + '\n'));
+        return this.port;
+    }
+
+    public async writeToBuffer(input: string) {
+        console.log(`⚓️ | input`, input);
+        const port = await this.getPort();
+        await port.write(Buffer.from(input + '\n'));
 
         const inputBuffer = Buffer.alloc(2 ** 17);
 
-        await this.port.drain();
+        await port.drain();
         await sleep(500);
 
-        const data = await this.port.read(inputBuffer, 0, 2 ** 15);
+        const data = await port.read(inputBuffer, 0, 2 ** 15);
 
         const stringBuffer = String(data.buffer).replaceAll('\x00', '').trim();
 
@@ -35,7 +38,6 @@ export class SerialConnection {
             .filter((val) => !val.includes(input.trim()))
             .filter((val) => val !== '>' && val !== '> ');
 
-        this.port.close();
         return { data: outputAsArray, ok: outputAsArray.includes('Done') };
     }
 
@@ -100,11 +102,7 @@ export class SerialConnection {
         let data: output;
         data = await this.writeToBuffer(cmd);
 
-        if (type === 'leader' && !data.data.includes(type)) {
-            data = await this.writeToBuffer(cmd);
-        }
-
-        if (type === 'child' && !data.data.includes(type)) {
+        if (!data.data.includes(type)) {
             data = await this.writeToBuffer(cmd);
         }
 
