@@ -44,6 +44,7 @@ app.get('/gun', async () => {
 
         serial = new SerialConnection({ uartPort: LEADER_PORT, baudRate: 115200 });
     }
+
     const config = setGunAttributes({ ammo_count: 500, mag_count: 10 });
     const target = 'fdde:ad00:beef:0:b72c:ffff:8c18:cfa';
 
@@ -58,10 +59,20 @@ app.get('/target', async () => {
 
         serial = new SerialConnection({ uartPort: LEADER_PORT, baudRate: 115200 });
     }
-    const config = 'GC,start';
-    const target = 'fdde:ad00:beef:0:d526:a15c:d9ab:84ff';
 
-    console.log(await serial?.writeToBuffer(`udp send ${target} 234 ${config}`));
+    const leader = await createLeaderNode(serial);
+
+    const data = await leader.getDevices();
+
+    const target = data.find((device) => device.type);
+
+    if (!target) {
+        return { ok: false };
+    }
+
+    const config = 'GC,start';
+
+    console.log(await serial?.writeToBuffer(`udp send ${target.ip} 234 ${config}`));
 
     return { ok: true };
 });
