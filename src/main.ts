@@ -39,6 +39,11 @@ app.get('/healthcheck', async () => {
 });
 
 app.get('/gun', async () => {
+    if (!serial) {
+        console.log('init serial');
+
+        serial = new SerialConnection({ uartPort: LEADER_PORT, baudRate: 115200 });
+    }
     const config = setGunAttributes({ ammo_count: 500, mag_count: 10 });
     const target = 'fdde:ad00:beef:0:b72c:ffff:8c18:cfa';
 
@@ -48,6 +53,11 @@ app.get('/gun', async () => {
 });
 
 app.get('/target', async () => {
+    if (!serial) {
+        console.log('init serial');
+
+        serial = new SerialConnection({ uartPort: LEADER_PORT, baudRate: 115200 });
+    }
     const config = 'GC,start';
     const target = 'fdde:ad00:beef:0:d526:a15c:d9ab:84ff';
 
