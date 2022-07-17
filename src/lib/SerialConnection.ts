@@ -21,16 +21,15 @@ export class SerialConnection {
 
     public async writeToBuffer(input: string) {
         console.log(`⚓️ | input`, input);
+        const inputBuffer = Buffer.alloc(2 ** 17);
+
         const port = await this.getPort();
         await port.write(Buffer.from(input + '\n'));
-
-        const inputBuffer = Buffer.alloc(2 ** 17);
 
         await port.drain();
         await sleep(500);
 
         const data = await port.read(inputBuffer, 0, 2 ** 15);
-
         const stringBuffer = String(data.buffer).replaceAll('\x00', '').trim();
 
         const outputAsArray = stringBuffer

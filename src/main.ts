@@ -20,19 +20,10 @@ app.register(fastifyBlipp);
 app.register(fastifyEtag);
 app.register(fastifyHelmet);
 
-const LEADER_PORT = '/dev/ttyUSB0';
+const LEADER_PORT = '/dev/ttyUSB1';
 const BAUD_RATE = 115200;
 
 let serial: SerialConnection | null = null;
-
-// (async () => {
-//     const port = new SerialPort({ baudRate: BAUD_RATE, path: LEADER_PORT });
-
-//     port?.on('data', (data) => {
-//         console.log(String(data));
-//     });
-
-// })();
 
 app.get('/healthcheck', async () => {
     return { ok: true };
@@ -42,7 +33,7 @@ app.get('/gun', async () => {
     if (!serial) {
         console.log('init serial');
 
-        serial = new SerialConnection({ uartPort: LEADER_PORT, baudRate: 115200 });
+        serial = new SerialConnection({ uartPort: LEADER_PORT, baudRate: BAUD_RATE });
     }
 
     const config = setGunAttributes({ ammo_count: 500, mag_count: 10 });
@@ -146,7 +137,6 @@ async function main() {
 
         if (!serial) {
             console.log('init serial');
-
             serial = new SerialConnection({ uartPort: LEADER_PORT, baudRate: 115200 });
         }
 
